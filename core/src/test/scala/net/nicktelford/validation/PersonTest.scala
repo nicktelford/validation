@@ -1,6 +1,7 @@
 package net.nicktelford.validation
 
-import cats.data.Validated.{valid, invalidNel}
+import cats.data.Validated.{valid, invalid, invalidNel}
+import cats.data.NonEmptyList
 import org.scalatest._
 
 class PersonTest extends FlatSpec with Matchers {
@@ -48,6 +49,17 @@ class PersonTest extends FlatSpec with Matchers {
     implicit val ctx = ValidationContext.validated
     ctx.validate(Person("Fred", -1)) should be (
       invalidNel(ConstraintViolation("age must be a positive integer"))
+    )
+    ctx.violations should not be empty
+  }
+
+  it should "yield an error for multiple violations" in {
+    implicit val ctx = ValidationContext.validated
+    ctx.validate(Person("", -1)) should be (
+      invalid(NonEmptyList(
+        ConstraintViolation("name must not be empty"),
+        ConstraintViolation("age must be a positive integer")
+      ))
     )
     ctx.violations should not be empty
   }

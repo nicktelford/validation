@@ -28,7 +28,7 @@ object ValidationContext {
     }
 
     def validate[A](f: A): ValidatedNel[ConstraintViolation, A] = {
-      NonEmptyList.fromList(violations) match {
+      NonEmptyList.fromList(violations.reverse) match {
         case None      => valid(f)
         case Some(err) => invalid(err)
       }
