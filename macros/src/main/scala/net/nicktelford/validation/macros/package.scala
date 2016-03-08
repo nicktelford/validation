@@ -15,7 +15,7 @@ package object macros {
   // note: this macro currently doesn't work
   // todo: find a way to correctly inject the ValidationContext
   def validatedImpl[E, A](c: blackbox.Context)
-                      (f: c.Tree): c.Expr[ValidatedNel[E, A]] = {
+                         (f: c.Tree): c.Expr[ValidatedNel[E, A]] = {
     import c.universe._
 
     c.Expr[ValidatedNel[E, A]](

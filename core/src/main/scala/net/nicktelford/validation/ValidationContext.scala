@@ -3,6 +3,12 @@ package net.nicktelford.validation
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.data.Validated.{valid, invalid}
 
+import scala.annotation.implicitNotFound
+
+@implicitNotFound(
+  "No implicit ValidationContext found. " +
+  "Ensure your class is annotated with @validated or defines an implicit " +
+    "ValidationContext parameter.")
 trait ValidationContext {
 
   def constraint(cond: Boolean, msg: => String): Unit
