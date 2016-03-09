@@ -4,7 +4,7 @@ import cats.data.ValidatedNel
 
 import scala.reflect.macros.blackbox
 
-package object macros {
+object macros {
 
   def constraintImpl(c: blackbox.Context)
                     (cond: c.Tree): c.Expr[Unit] = {
