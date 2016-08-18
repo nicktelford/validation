@@ -2,7 +2,7 @@ package net.nicktelford.validation
 
 import cats.Show
 import cats.implicits._
-import cats.data.{Validated, NonEmptyList => NEL}
+import cats.data.{Validated, ValidatedNel, NonEmptyList => NEL}
 import cats.data.Validated.{invalidNel, valid}
 
 object Validator {
@@ -13,10 +13,16 @@ object Validator {
 
 trait Validator[E, A] {
 
+  private[validation] def validateConstraints(subject: A): ValidatedNel[E, A]
+
   def validate(subject: A): Validated[ConstraintViolations[E, A], A]
 
   def leftMap[EE: Show](f: E => EE): Validator[EE, A] = {
     new Validator[EE, A] {
+      override private[validation] def validateConstraints(subject: A): ValidatedNel[EE, A] = {
+        Validator.this.validateConstraints(subject)
+          .leftMap(_.map(f))
+      }
       override def validate(subject: A): Validated[ConstraintViolations[EE, A], A] = {
         Validator.this.validate(subject)
           .leftMap(x => x.copy(reasons = x.reasons.map(f)))
@@ -25,29 +31,38 @@ trait Validator[E, A] {
   }
 }
 
-case class Constraint[E, A](predicate: A => Boolean, error: A => E)
+sealed trait Constraint[E, A] {
+  def validate(subject: A): ValidatedNel[E, A]
+}
+
+case class BasicConstraint[E, A](predicate: A => Boolean, error: A => E) extends Constraint[E, A] {
+  override def validate(subject: A): ValidatedNel[E, A] = {
+    if (predicate(subject)) valid[NEL[E], A](subject)
+    else invalidNel[E, A](error(subject))
+  }
+}
+
+case class NestedConstraint[E, A, B](selector: A => B)
+                                    (implicit Validator: Validator[E, B]) extends Constraint[E, A] {
+  override def validate(subject: A): ValidatedNel[E, A] =
+  // todo: instead of overriding the subject, we should override it in the result (right-side) and instead construct a Path the correct subject in the ConstraintViolations
+    Validator.validateConstraints(selector(subject)).map(_ => subject)
+}
 
 case class ConstraintValidator[E: Show, A](constraints: List[Constraint[E, A]])
   extends Validator[E, A] {
 
+  override private[validation] def validateConstraints(subject: A): ValidatedNel[E, A] = {
+    constraints.map(_.validate(subject)).foldLeft(valid[NEL[E], A](subject)) {
+      // this seems like abuse of Apply#ap, better way to do it?
+      // the main problem of this is that we ignore previous successful values
+      // but since they're guaranteed to be the same, that's ok here.
+      (acc, x) => x.ap(acc.map(y => (_: A) => y))
+    }
+  }
+
   def validate(subject: A): Validated[ConstraintViolations[E, A], A] = {
-    constraints
-      // validate constraints
-      .map {
-        case Constraint(predicate, _) if predicate(subject) =>
-          valid[NEL[E], A](subject)
-        case Constraint(_, error) =>
-          invalidNel[E, A](error(subject))
-      }
-      // merge our results down to a NEL of failures or the successful result
-      .foldLeft(valid[NEL[E], A](subject)) {
-        // this seems like abuse of Apply#ap, better way to do it?
-        // the main problem of this is that we ignore previous successful values
-        // but since they're guaranteed to be the same, that's ok here.
-        (acc, x) => x.ap(acc.map(y => (_: A) => y))
-      }
-      // lift failures in to a ConstraintViolations, which includes the subject
-      .leftMap(ConstraintViolations(subject, _))
+    validateConstraints(subject).leftMap(ConstraintViolations(subject, _))
   }
 }
 

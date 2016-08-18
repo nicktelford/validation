@@ -8,8 +8,8 @@ import org.scalatest._
 
 object Person {
   implicit val personValidator = Validator[String, Person](
-    constraint(_.name.nonEmpty, _ => "name must not be empty"),
-    constraint(_.age > 0, _ => "age must be positive")
+    require(_.name.nonEmpty, "name must not be empty"),
+    require(_.age > 0, "age must be positive")
   )
 }
 
