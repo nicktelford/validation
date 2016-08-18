@@ -7,11 +7,11 @@ import cats.data.Validated.{invalid, valid}
 import cats.data.{ValidatedNel, NonEmptyList => NEL}
 import validation._
 import org.scalatest._
-import cats.{Applicative, Traverse}
+import cats.Traverse
 
-class ApplicativeTest extends FlatSpec with Matchers {
+class TraversableTest extends FlatSpec with Matchers {
 
-  implicit def applicativeValidator[F[_]: Applicative: Traverse, E, A](implicit Validator: Validator[E, A]) = {
+  implicit def traversableValidator[F[_]: Traverse, E, A](implicit Validator: Validator[E, A]) = {
     new Validator[E, F[A]] {
       override private[validation] def validateConstraints(subject: F[A]): ValidatedNel[E, F[A]] = {
         Traverse[F].sequence[ValidatedNel[E, ?], A](Traverse[F].map(subject)(Validator.validateConstraints))
