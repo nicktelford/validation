@@ -4,24 +4,19 @@ lazy val projectSettings = Seq(
   scalaVersion := "2.11.7",
   crossScalaVersions := Seq("2.10.5", "2.11.7"),
 
+  libraryDependencies += compilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3"),
+
   libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0-M15" % Test,
   
-  libraryDependencies += "org.typelevel" %% "cats" % "0.4.0"
+  libraryDependencies += "org.typelevel" %% "cats" % "0.6.1"
 )
 
-
 lazy val root = (project in file("."))
-  .aggregate(core, macros)
+  .aggregate(core)
   .settings(name := "validation")
   .settings(projectSettings: _*)
 
 lazy val core = (project in file("core"))
   .settings(name := "core")
   .settings(moduleName := "validation-core")
-  .settings(projectSettings: _*)
-  .dependsOn(macros)
-
-lazy val macros = (project in file("macros"))
-  .settings(name := "macros")
-  .settings(moduleName := "validation-macros")
   .settings(projectSettings: _*)

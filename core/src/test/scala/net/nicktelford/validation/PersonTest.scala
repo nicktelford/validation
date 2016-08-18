@@ -1,84 +1,59 @@
 package net.nicktelford.validation
 
-import cats.data.Validated.{valid, invalid, invalidNel}
-import cats.data.NonEmptyList
+import cats.implicits._
+import cats.data.Validated.{invalid, valid}
+import cats.data.{NonEmptyList => NEL}
+import validation._
 import org.scalatest._
+
+object Person {
+  implicit val personValidator = Validator[String, Person](
+    constraint(_.name.nonEmpty, _ => "name must not be empty"),
+    constraint(_.age > 0, _ => "age must be positive")
+  )
+}
+
+case class Person(name: String, age: Int)
 
 class PersonTest extends FlatSpec with Matchers {
 
-  case class Person(name: String, age: Int)
-                   (implicit ctx: ValidationContext = ValidationContext.require) {
-    constraint(name.nonEmpty, "name must not be empty")
-    constraint(age > 0, "age must be a positive integer")
+  val validator = implicitly[Validator[String, Person]]
+
+  "A Person being validated" should "validate a valid Person" in {
+    validator.validate(Person("Nick", 29)) should be(valid(Person("Nick", 29)))
   }
 
-  "A Person (without validation) " should "do nothing when valid" in {
-    Person("Nick", 29) should be(
-      Person("Nick", 29)
-    )
-  }
-
-  it should "throw an IllegalArgumentException for empty name" in {
-    an [IllegalArgumentException] should be thrownBy {
-      Person("", 100)
+  it should "yield an error when validating with no name" in {
+    val person = Person("", 29)
+    validator.validate(person) should be {
+      invalid(ConstraintViolations(person, NEL("name must not be empty")))
     }
   }
 
-  it should "throw an IllegalArgumentException for invalid age" in {
-    an [IllegalArgumentException] should be thrownBy {
-      Person("Fred", -1)
+  it should "yield an error when validating with negative age" in {
+    val person = Person("Nick", -1)
+    validator.validate(person) should be {
+      invalid(ConstraintViolations(person, NEL("age must be positive")))
     }
   }
 
-  "A Person (without macros) " should "validate when valid" in {
-    implicit val ctx = ValidationContext.validated
-    ctx.validate(Person("Nick", 29)) should be(
-      valid(Person("Nick", 29))
-    )
+  it should "yield multiple errors when validating with multiple errors" in {
+    val person = Person("", -1)
+    validator.validate(person) should be {
+      invalid(
+        ConstraintViolations(
+          person, NEL("name must not be empty","age must be positive")
+        )
+      )
+    }
   }
 
-  it should "yield an error for empty name" in {
-    implicit val ctx = ValidationContext.validated
-    ctx.validate(Person("", 100)) should be(
-      invalidNel(ConstraintViolation("name must not be empty"))
-    )
-    ctx.violations should not be empty
-  }
-
-  it should "yield an error for invalid age" in {
-    implicit val ctx = ValidationContext.validated
-    ctx.validate(Person("Fred", -1)) should be (
-      invalidNel(ConstraintViolation("age must be a positive integer"))
-    )
-    ctx.violations should not be empty
-  }
-
-  it should "yield an error for multiple violations" in {
-    implicit val ctx = ValidationContext.validated
-    ctx.validate(Person("", -1)) should be (
-      invalid(NonEmptyList(
-        ConstraintViolation("name must not be empty"),
-        ConstraintViolation("age must be a positive integer")
+  it should "leftMap to transform errors" in {
+    val person = Person("", -1)
+    validator.leftMap(_.length).validate(person) should be {
+      invalid(ConstraintViolations(
+        person, NEL("name must not be empty".length, "age must be positive".length)
       ))
-    )
-    ctx.violations should not be empty
-  }
-
-  "A Person (macros) " should "validate when valid" in {
-    validated(Person("Nick", 29)) should be(
-      valid(Person("Nick", 29))
-    )
-  }
-
-  it should "yield an error for empty name" in {
-    validated(Person("", 100)) should be (
-      invalidNel(ConstraintViolation("name must not be empty"))
-    )
-  }
-
-  it should "yield an error for invalid age" in {
-    validated(Person("Fred", -1)) should be (
-      invalidNel(ConstraintViolation("age must be a positive integer"))
-    )
+    }
   }
 }

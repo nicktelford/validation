@@ -1,19 +1,16 @@
-package net.nicktelford
-
-import cats.data.ValidatedNel
-
-import net.nicktelford.validation.macros._
+import net.nicktelford.validation.{Constraint, Validator}
 
 package object validation {
+//
+//  def constraint[E, A](predicate: A => Boolean, error: E): Constraint[E, A] =
+//    Constraint(predicate, _ => error)
 
-  import scala.language.experimental.macros
+  def constraint[E, A](predicate: A => Boolean,
+                       error: A => E): Constraint[E, A] =
+    Constraint(predicate, error)
 
-  def validated[A](f: => A): ValidatedNel[ConstraintViolation, A] =
-    macro validatedImpl[ConstraintViolation, A]
-
-  def constraint(cond: Boolean): Unit = macro constraintImpl
-
-  def constraint(cond: Boolean, msg: => String)
-                (implicit v: ValidationContext): Unit =
-    v.constraint(cond, msg)
+//  def constraint[E, A, B](selector: A => B)
+//                         (implicit Validator: Validator[E, B]): Constraint[E, A] = {
+//    Constraint(Validator.validate(selector))
+//  }
 }
