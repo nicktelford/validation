@@ -2,7 +2,7 @@ package net.nicktelford.validation
 
 import cats.implicits._
 import cats.data.Validated.{invalid, valid}
-import cats.data.{Xor, NonEmptyList => NEL}
+import cats.data.{NonEmptyList => NEL}
 import validation._
 import org.scalatest._
 

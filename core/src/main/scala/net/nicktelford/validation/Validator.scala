@@ -15,17 +15,16 @@ trait Validator[E, A] {
 
   private[validation] def validateConstraints(subject: A): ValidatedNel[E, A]
 
-  def validate(subject: A): Validated[ConstraintViolations[E, A], A]
+  def validate(subject: A)
+              (implicit ShowE: Show[E]): Validated[ConstraintViolations[E, A], A] = {
+    validateConstraints(subject).leftMap(ConstraintViolations(subject, _))
+  }
 
   def leftMap[EE: Show](f: E => EE): Validator[EE, A] = {
     new Validator[EE, A] {
       override private[validation] def validateConstraints(subject: A): ValidatedNel[EE, A] = {
         Validator.this.validateConstraints(subject)
           .leftMap(_.map(f))
-      }
-      override def validate(subject: A): Validated[ConstraintViolations[EE, A], A] = {
-        Validator.this.validate(subject)
-          .leftMap(x => x.copy(reasons = x.reasons.map(f)))
       }
     }
   }
@@ -59,10 +58,6 @@ case class ConstraintValidator[E: Show, A](constraints: List[Constraint[E, A]])
       // but since they're guaranteed to be the same, that's ok here.
       (acc, x) => x.ap(acc.map(y => (_: A) => y))
     }
-  }
-
-  def validate(subject: A): Validated[ConstraintViolations[E, A], A] = {
-    validateConstraints(subject).leftMap(ConstraintViolations(subject, _))
   }
 }
 
