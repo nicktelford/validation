@@ -1,7 +1,7 @@
 package net.nicktelford.validation
 
 import cats.implicits._
-import cats.{Eq, Monoid}
+import cats.Eq
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.data.Validated.{invalidNel, valid}
 import cats.kernel.laws.GroupLaws

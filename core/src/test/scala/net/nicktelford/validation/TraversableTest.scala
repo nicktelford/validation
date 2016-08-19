@@ -36,7 +36,7 @@ class TraversableTest extends FlatSpec with Matchers {
   it should "fail with one valid element and one invalid element" in {
     val list = Person("Nick", 1) :: Person("Chris", -1) :: Nil
     validator.validate(list) should be {
-      invalidNel(ConstraintViolation("age must be positive"))
+      invalidNel(ConstraintViolation("age", "must be positive"))
     }
   }
 
@@ -44,8 +44,8 @@ class TraversableTest extends FlatSpec with Matchers {
     val list = Person("", 1) :: Person("Chris", -1) :: Nil
     validator.validate(list) should be {
       invalid(NEL(
-        ConstraintViolation("name must not be empty"),
-        ConstraintViolation("age must be positive")
+        ConstraintViolation("name", "must not be empty"),
+        ConstraintViolation("age", "must be positive")
       ))
     }
   }

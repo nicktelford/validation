@@ -1,4 +1,4 @@
-import cats.Cartesian
+import cats.{Cartesian, Show}
 import cats.data.ValidatedNel
 import cats.data.Validated.valid
 import cats.functor.Invariant
@@ -7,20 +7,26 @@ import net.nicktelford.validation._
 
 package object validation {
 
+  type Path = List[String]
+
   def require[A](predicate: A => Boolean,
+                 name: String,
                  error: => String): Validator[ConstraintViolation, A] =
-    new ConstraintValidator(predicate, _ => ConstraintViolation(error))
+    constraint(
+      predicate, name, (x: A, loc: Path) => ConstraintViolation(loc, error))
 
-  def constraint[E, A](predicate: A => Boolean, error: A => E): Validator[E, A] =
-    new ConstraintValidator(predicate, error)
+  def constraint[E, A](predicate: A => Boolean,
+                       name: String,
+                       error: (A, List[String]) => E): Validator[E, A] =
+    new ConstraintValidator(predicate, error, name :: Nil)
 
-  def constraint[E, A, B](selector: A => B)
-                         (implicit Validator: Validator[E, B]): Validator[E, A] =
-    new NestedValidator(selector)(Validator)
+  def constraint[E, A, B](selector: A => B, name: String)
+                         (implicit V: Validator[E, B]): Validator[E, A] =
+    validate(selector, name)(V)
 
-  def validate[E, A, B](selector: A => B)
+  def validate[E, A, B](selector: A => B, name: String)
                        (implicit V: Validator[E, B]): Validator[E, A] =
-    new NestedValidator(selector)(V)
+    new NestedValidator(selector, name :: Nil)(V)
 
   implicit def validatorInstances1[E] =
     new Cartesian[Validator[E, ?]] with Invariant[Validator[E, ?]] {
@@ -42,4 +48,7 @@ package object validation {
       override def combine(x: Validator[E, A],
                            y: Validator[E, A]): Validator[E, A] = x combine y
     }
+
+  implicit val constraintViolationInstance =
+    Show.show[ConstraintViolation](_.message)
 }

@@ -3,6 +3,7 @@ package net.nicktelford.validation
 import cats.implicits._
 import cats.data.{ValidatedNel, NonEmptyList => NEL}
 import cats.data.Validated.{Invalid, Valid, invalidNel, valid}
+import validation._
 
 object Validator {
 
@@ -14,6 +15,16 @@ object Validator {
 }
 
 trait Validator[E, A] {
+
+  private[validation] val path: Path = Nil
+  private[validation] def parent(parents: Path): Validator[E, A] =
+    new Validator[E, A] {
+      override private[validation] val path: Path =
+        parents ++ Validator.this.path
+
+      override def validate(subject: A): ValidatedNel[E, A] =
+        Validator.this.validate(subject)
+    }
 
   def validate(subject: A): ValidatedNel[E, A]
 
@@ -49,31 +60,49 @@ trait Validator[E, A] {
   }
 }
 
-class ConstraintValidator[E, A](predicate: A => Boolean, error: A => E)
+class ConstraintValidator[E, A](predicate: A => Boolean,
+                                error: (A, Path) => E,
+                                override val path: Path = Nil)
   extends Validator[E, A] {
+
+  override private[validation]
+  def parent(parents: Path): Validator[E, A] =
+    new ConstraintValidator[E, A](predicate, error, parents ++ path)
 
   override def validate(subject: A): ValidatedNel[E, A] =
     if (predicate(subject)) valid(subject)
-    else invalidNel(error(subject))
+    else invalidNel(error(subject, path))
 }
 
-class NestedValidator[E, A, B](selector: A => B)(implicit V: Validator[E, B])
+class NestedValidator[E, A, B](selector: A => B, override val path: Path = Nil)
+                              (implicit V: Validator[E, B])
   extends Validator[E, A] {
 
+  override private[validation]
+  def parent(parents: List[String]): Validator[E, A] =
+    new NestedValidator[E, A, B](selector, parents ++ path)(V)
+
   override def validate(subject: A): ValidatedNel[E, A] = {
-    V.validate(selector(subject)).map(_ => subject)
+    V.parent(path).validate(selector(subject)).map(_ => subject)
   }
 }
 
-class MultipleValidator[E, A](validators: List[Validator[E, A]])
+class MultipleValidator[E, A](validators: List[Validator[E, A]],
+                              override val path: Path = Nil)
   extends Validator[E, A] {
 
+  override private[validation]
+  def parent(parents: Path): Validator[E, A] =
+    new MultipleValidator[E, A](validators, parents ++ path)
+
   override def validate(subject: A): ValidatedNel[E, A] = {
-    validators.map(_.validate(subject)).foldLeft(valid[NEL[E], A](subject)) {
-      // this seems like abuse of Apply#ap, better way to do it?
-      // the main problem of this is that we ignore previous successful values
-      // but since they're guaranteed to be the same, that's ok here.
-      (acc, x) => x.ap(acc.map(y => _ => y))
-    }
+    validators
+      .map(_.parent(path).validate(subject))
+      .foldLeft(valid[NEL[E], A](subject)) {
+        // this seems like abuse of Apply#ap, better way to do it?
+        // the main problem of this is that we ignore previous successful values
+        // but since they're guaranteed to be the same, that's ok here.
+        (acc, x) => x.ap(acc.map(y => _ => y))
+      }
   }
 }

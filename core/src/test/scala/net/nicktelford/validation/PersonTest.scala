@@ -7,8 +7,8 @@ import org.scalatest._
 
 object Person {
   implicit val personValidator = Validator[Person](
-    require(_.name.nonEmpty, "name must not be empty"),
-    require(_.age > 0, "age must be positive")
+    require(_.name.nonEmpty, "name", "must not be empty"),
+    require(_.age > 0, "age", "must be positive")
   )
 }
 
@@ -25,14 +25,14 @@ class PersonTest extends FlatSpec with Matchers {
   it should "yield an error when validating with no name" in {
     val person = Person("", 29)
     validator.validate(person) should be {
-      invalidNel(ConstraintViolation("name must not be empty"))
+      invalidNel(ConstraintViolation("name", "must not be empty"))
     }
   }
 
   it should "yield an error when validating with negative age" in {
     val person = Person("Nick", -1)
     validator.validate(person) should be {
-      invalidNel(ConstraintViolation("age must be positive"))
+      invalidNel(ConstraintViolation("age", "must be positive"))
     }
   }
 
@@ -40,8 +40,8 @@ class PersonTest extends FlatSpec with Matchers {
     val person = Person("", -1)
     validator.validate(person) should be {
       invalid(NEL(
-        ConstraintViolation("name must not be empty"),
-        ConstraintViolation("age must be positive")
+        ConstraintViolation("name", "must not be empty"),
+        ConstraintViolation("age", "must be positive")
       ))
     }
   }
@@ -50,8 +50,8 @@ class PersonTest extends FlatSpec with Matchers {
     val person = Person("", -1)
     validator.mapErrors(_.cause.length).validate(person) should be {
       invalid(NEL(
-        "name must not be empty".length,
-        "age must be positive".length
+        "must not be empty".length,
+        "must be positive".length
       ))
     }
   }
@@ -59,8 +59,8 @@ class PersonTest extends FlatSpec with Matchers {
   it should "provide the cartesian syntax" in {
     import cats.syntax.cartesian._
 
-    val nameValidator = Validator[Person](require(_.name.nonEmpty, "name must not be empty"))
-    val ageValidator = Validator[Person](require(_.age >= 0, "age must be positive"))
+    val nameValidator = Validator[Person](require(_.name.nonEmpty, "name", "must not be empty"))
+    val ageValidator = Validator[Person](require(_.age >= 0, "age", "must be positive"))
     val validPerson = Person("Nick", 30)
     val invalidName = Person("", 20)
     val invalidAge = Person("Chris", -299)
@@ -71,15 +71,15 @@ class PersonTest extends FlatSpec with Matchers {
 
     validator.validate(validPerson) should be(valid(validPerson))
     validator.validate(invalidName) should be {
-      invalidNel(ConstraintViolation("name must not be empty"))
+      invalidNel(ConstraintViolation("name", "must not be empty"))
     }
     validator.validate(invalidAge) should be {
-      invalidNel(ConstraintViolation("age must be positive"))
+      invalidNel(ConstraintViolation("age", "must be positive"))
     }
     validator.validate(invalidPerson) should be {
       invalid(NEL(
-        ConstraintViolation("name must not be empty"),
-        ConstraintViolation("age must be positive")
+        ConstraintViolation("name", "must not be empty"),
+        ConstraintViolation("age", "must be positive")
       ))
     }
   }
