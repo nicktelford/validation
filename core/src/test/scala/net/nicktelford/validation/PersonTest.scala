@@ -55,4 +55,32 @@ class PersonTest extends FlatSpec with Matchers {
       ))
     }
   }
+
+  it should "provide the cartesian syntax" in {
+    import cats.syntax.cartesian._
+
+    val nameValidator = Validator[Person](require(_.name.nonEmpty, "name must not be empty"))
+    val ageValidator = Validator[Person](require(_.age >= 0, "age must be positive"))
+    val validPerson = Person("Nick", 30)
+    val invalidName = Person("", 20)
+    val invalidAge = Person("Chris", -299)
+    val invalidPerson = Person("", -1)
+
+    val validator = (nameValidator |@| ageValidator)
+      .imap((x, y) => x)(z => (z, z))
+
+    validator.validate(validPerson) should be(valid(validPerson))
+    validator.validate(invalidName) should be {
+      invalidNel(ConstraintViolation("name must not be empty"))
+    }
+    validator.validate(invalidAge) should be {
+      invalidNel(ConstraintViolation("age must be positive"))
+    }
+    validator.validate(invalidPerson) should be {
+      invalid(NEL(
+        ConstraintViolation("name must not be empty"),
+        ConstraintViolation("age must be positive")
+      ))
+    }
+  }
 }
