@@ -18,7 +18,7 @@ class PersonTest extends FlatSpec with Matchers {
 
   val validator = implicitly[Validator[ConstraintViolation, Person]]
 
-  "A Person being validated" should "validate a valid Person" in {
+  "Validator" should "validate a valid Person" in {
     validator.validate(Person("Nick", 29)) should be(valid(Person("Nick", 29)))
   }
 
