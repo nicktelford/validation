@@ -48,7 +48,7 @@ class PersonTest extends FlatSpec with Matchers {
 
   it should "leftMap to transform errors" in {
     val person = Person("", -1)
-    validator.leftMap(_.cause.length).validate(person) should be {
+    validator.mapErrors(_.cause.length).validate(person) should be {
       invalid(NEL(
         "name must not be empty".length,
         "age must be positive".length

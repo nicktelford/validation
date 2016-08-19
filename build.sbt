@@ -5,10 +5,9 @@ lazy val projectSettings = Seq(
   crossScalaVersions := Seq("2.10.5", "2.11.7"),
 
   libraryDependencies += compilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3"),
-
+  libraryDependencies += "org.typelevel" %% "cats" % "0.6.1",
   libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0-M15" % Test,
-  
-  libraryDependencies += "org.typelevel" %% "cats" % "0.6.1"
+  libraryDependencies += "org.typelevel" %% "discipline" % "0.5" % Test
 )
 
 lazy val root = (project in file("."))

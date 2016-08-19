@@ -2,7 +2,7 @@ package net.nicktelford.validation
 
 import cats.implicits._
 import cats.data.{ValidatedNel, NonEmptyList => NEL}
-import cats.data.Validated.{invalidNel, valid}
+import cats.data.Validated.{Invalid, Valid, invalidNel, valid}
 
 object Validator {
 
@@ -14,10 +14,38 @@ object Validator {
 }
 
 trait Validator[E, A] {
+
   def validate(subject: A): ValidatedNel[E, A]
-  def leftMap[EE](f: E => EE): Validator[EE, A] = new Validator[EE, A] {
+
+  def mapErrors[EE](f: E => EE): Validator[EE, A] = new Validator[EE, A] {
     override def validate(subject: A): ValidatedNel[EE, A] =
       Validator.this.validate(subject).leftMap(_.map(f))
+  }
+
+  // from Invariant
+  def imap[B](f: A => B)(g: B => A): Validator[E, B] = new Validator[E, B] {
+    override def validate(subject: B): ValidatedNel[E, B] = {
+      Validator.this.validate(g(subject)).map(f)
+    }
+  }
+
+  // from Semigroup/Monoid
+  def combine(other: Validator[E, A]): Validator[E, A] = new Validator[E, A] {
+    override def validate(subject: A): ValidatedNel[E, A] = {
+      (Validator.this.validate(subject), other.validate(subject)) match {
+        case (x @ Valid(_), Valid(_)) => x
+        case (Invalid(e1), Invalid(e2)) => Invalid(e1.combine(e2))
+        case (x @ Invalid(_), _) => x
+        case (_, x @ Invalid(_)) => x
+      }
+    }
+  }
+
+  // from Cartesian
+  def product[B](other: Validator[E, B]): Validator[E, (A, B)] = new Validator[E, (A, B)] {
+    override def validate(subject: (A, B)): ValidatedNel[E, (A, B)] = {
+      Validator.this.validate(subject._1).product(other.validate(subject._2))
+    }
   }
 }
 
