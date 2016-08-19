@@ -1,19 +1,19 @@
-import net.nicktelford.validation.{BasicConstraint, Constraint, NestedConstraint, Validator}
+import net.nicktelford.validation._
 
 package object validation {
 
-  def require[E, A](predicate: A => Boolean, error: E): Constraint[E, A] =
-    BasicConstraint(predicate, _ => error)
+  def require[A](predicate: A => Boolean,
+                 error: => String): Validator[ConstraintViolation, A] =
+    new ConstraintValidator(predicate, _ => ConstraintViolation(error))
 
-  def validate[E, A, B](selector: A => B)
-                       (implicit Validator: Validator[E, B]): Constraint[E, A] =
-    NestedConstraint(selector)(Validator)
-
-  def constraint[E, A](predicate: A => Boolean,
-                       error: A => E): Constraint[E, A] =
-    BasicConstraint(predicate, error)
+  def constraint[E, A](predicate: A => Boolean, error: A => E): Validator[E, A] =
+    new ConstraintValidator(predicate, error)
 
   def constraint[E, A, B](selector: A => B)
-                         (implicit Validator: Validator[E, B]): Constraint[E, A] =
-    NestedConstraint(selector)(Validator)
+                         (implicit Validator: Validator[E, B]): Validator[E, A] =
+    new NestedValidator(selector)(Validator)
+
+  def validate[E, A, B](selector: A => B)
+                       (implicit V: Validator[E, B]): Validator[E, A] =
+    new NestedValidator(selector)(V)
 }
