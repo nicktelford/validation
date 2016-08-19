@@ -7,7 +7,9 @@ import validation._
 
 object Validator {
 
-  def apply[A](constraints: Validator[ConstraintViolation, A]*): Validator[ConstraintViolation, A] =
+  def apply[A](implicit V: Validator[ConstraintViolation, A]): Validator[ConstraintViolation, A] = V
+
+  def of[A](constraints: Validator[ConstraintViolation, A]*): Validator[ConstraintViolation, A] =
     new MultipleValidator[ConstraintViolation, A](constraints.toList)
 
   def custom[E, A](constraints: Validator[E, A]*): Validator[E, A] =

@@ -28,6 +28,11 @@ package object validation {
                        (implicit V: Validator[E, B]): Validator[E, A] =
     new NestedValidator(selector, name :: Nil)(V)
 
+  implicit class ValidatorSyntax[A](val x: A) extends AnyVal {
+    def validated(implicit V: Validator[ConstraintViolation, A]): ValidatedNel[ConstraintViolation, A] =
+      V.validate(x)
+  }
+
   implicit def validatorInstances1[E] =
     new Cartesian[Validator[E, ?]] with Invariant[Validator[E, ?]] {
       override def product[A, B](fa: Validator[E, A],
