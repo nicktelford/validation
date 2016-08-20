@@ -3,7 +3,6 @@ package net.nicktelford.validation
 import cats.implicits._
 import cats.data.{ValidatedNel, NonEmptyList => NEL}
 import cats.data.Validated.{Invalid, Valid, invalidNel, valid}
-import validation._
 
 object Validator {
 

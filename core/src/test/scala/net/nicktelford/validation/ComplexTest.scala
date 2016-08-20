@@ -2,7 +2,6 @@ package net.nicktelford.validation
 
 import cats.data.Validated.{invalidNel, invalid, valid}
 import cats.data.{NonEmptyList => NEL}
-import validation._
 import org.scalatest._
 
 object ComplexPerson {

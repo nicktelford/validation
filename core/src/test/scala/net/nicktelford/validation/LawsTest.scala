@@ -10,7 +10,6 @@ import org.scalatest.FunSuite
 import cats.laws.discipline.arbitrary._
 import org.scalacheck.{Arbitrary, Gen, Prop}
 import org.typelevel.discipline.scalatest.Discipline
-import validation._
 
 class LawsTest extends FunSuite with Discipline {
 

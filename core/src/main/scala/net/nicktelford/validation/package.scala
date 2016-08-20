@@ -1,9 +1,13 @@
-import cats.{Cartesian, Show}
+package net.nicktelford
+
+import cats.implicits._
+import cats.{Cartesian, Show, Traverse}
 import cats.data.ValidatedNel
 import cats.data.Validated.valid
 import cats.functor.Invariant
 import cats.kernel.Monoid
-import net.nicktelford.validation._
+
+import scala.language.higherKinds
 
 package object validation {
 
@@ -56,4 +60,15 @@ package object validation {
 
   implicit val constraintViolationInstance =
     Show.show[ConstraintViolation](_.message)
+
+  implicit def traversableValidator[F[_]: Traverse, E, A]
+                                   (implicit V: Validator[E, A]) = {
+    new Validator[E, F[A]] {
+      override def validate(subject: F[A]): ValidatedNel[E, F[A]] = {
+        Traverse[F].sequence[ValidatedNel[E, ?], A] {
+          Traverse[F].map(subject)(V.validate)
+        }
+      }
+    }
+  }
 }

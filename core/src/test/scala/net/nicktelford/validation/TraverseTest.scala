@@ -4,23 +4,10 @@ import scala.language.higherKinds
 
 import cats.implicits._
 import cats.data.Validated.{invalidNel, invalid, valid}
-import cats.data.{ValidatedNel, NonEmptyList => NEL}
+import cats.data.{NonEmptyList => NEL}
 import org.scalatest._
-import cats.Traverse
-import validation._
 
-class TraversableTest extends FlatSpec with Matchers {
-
-  implicit def traversableValidator[F[_]: Traverse, E, A]
-                                   (implicit Validator: Validator[E, A]) = {
-    new Validator[E, F[A]] {
-      override def validate(subject: F[A]): ValidatedNel[E, F[A]] = {
-        Traverse[F].sequence[ValidatedNel[E, ?], A] {
-          Traverse[F].map(subject)(Validator.validate)
-        }
-      }
-    }
-  }
+class TraverseTest extends FlatSpec with Matchers {
 
   "Lists" should "validate when empty" in {
     val list = List.empty[Person]
@@ -49,4 +36,20 @@ class TraversableTest extends FlatSpec with Matchers {
     }
   }
 
+  "Option" should "validate when empty" in {
+    val x = Option.empty[Person]
+    x.validated should be(valid(x))
+  }
+
+  it should "validate with one valid element" in {
+    val x = Option(Person("Nick", 1))
+    x.validated should be(valid(x))
+  }
+
+  it should "fail with one invalid element" in {
+    val x = Option(Person("Chris", -1))
+    x.validated should be {
+      invalidNel(ConstraintViolation("age", "must be positive"))
+    }
+  }
 }
