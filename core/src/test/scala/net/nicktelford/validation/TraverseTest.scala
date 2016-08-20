@@ -36,6 +36,33 @@ class TraverseTest extends FlatSpec with Matchers {
     }
   }
 
+  "Map" should "validate when empty" in {
+    val x = Map.empty[String, Person]
+    x.validated should be(valid(x))
+  }
+
+  it should "validate with one valid element" in {
+    val x = Map("Test" -> Person("Nick", 1))
+    x.validated should be(valid(x))
+  }
+
+  it should "fail with one valid element and one invalid element" in {
+    val x = Map("Valid" -> Person("Nick", 1), "Invalid" -> Person("Chris", -1))
+    x.validated should be {
+      invalidNel(ConstraintViolation("age", "must be positive"))
+    }
+  }
+
+  it should "fail with multiple elements, all invalid" in {
+    val x = Map("Invalid1" -> Person("", 1), "Invalid2" -> Person("Chris", -1))
+    x.validated should be {
+      invalid(NEL(
+        ConstraintViolation("name", "must not be empty"),
+        ConstraintViolation("age", "must be positive")
+      ))
+    }
+  }
+
   "Option" should "validate when empty" in {
     val x = Option.empty[Person]
     x.validated should be(valid(x))

@@ -71,4 +71,14 @@ package object validation {
       }
     }
   }
+
+  implicit def traversable2Validator[F[_, _], E, A, B](implicit T: Traverse[F[A, ?]],
+                                                                V: Validator[E, B]) =
+    new Validator[E, F[A, B]] {
+      override def validate(subject: F[A, B]): ValidatedNel[E, F[A, B]] = {
+        Traverse[F[A, ?]].sequence[ValidatedNel[E, ?], B] {
+          Traverse[F[A, ?]].map(subject)(V.validate)
+        }
+      }
+    }
 }
