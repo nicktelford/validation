@@ -14,17 +14,17 @@ import org.typelevel.discipline.scalatest.Discipline
 class LawsTest extends FunSuite with Discipline {
 
   implicit def validatorArbitrary[E, A](implicit E: Arbitrary[E]): Arbitrary[Validator[E, A]] = {
-    def invalidValidator[E, A](e: E) = new Validator[E, A] {
+    def invalidValidator(e: E) = new Validator[E, A] {
       override def validate(subject: A): ValidatedNel[E, A] = invalidNel(e)
     }
 
-    def validValidator[E, A] = new Validator[E, A] {
+    def validValidator = new Validator[E, A] {
       override def validate(subject: A): ValidatedNel[E, A] = valid(subject)
     }
 
     Arbitrary(Gen.oneOf(
-      E.arbitrary.map(invalidValidator[E, A]),
-      Gen.const(validValidator[E, A])
+      E.arbitrary.map(invalidValidator),
+      Gen.const(validValidator)
     ))
   }
 
