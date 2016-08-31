@@ -46,7 +46,7 @@ class ComplexTest extends FlatSpec with Matchers {
   it should "fail on invalid root and nested objects" in {
     val person = ComplexPerson("Nick", 0, Address(Right(100), "", "Skylake", "Belgium"))
     person.validated should be {
-      invalid(NEL(
+      invalid(NEL.of(
         ConstraintViolation("age", "must be positive"),
         ConstraintViolation("address" :: "street" :: Nil, "must not be empty")
       ))

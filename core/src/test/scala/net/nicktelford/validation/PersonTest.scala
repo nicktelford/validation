@@ -38,7 +38,7 @@ class PersonTest extends FlatSpec with Matchers {
   it should "yield multiple errors when validating with multiple errors" in {
     val person = Person("", -1)
     person.validated should be {
-      invalid(NEL(
+      invalid(NEL.of(
         ConstraintViolation("name", "must not be empty"),
         ConstraintViolation("age", "must be positive")
       ))
@@ -48,7 +48,7 @@ class PersonTest extends FlatSpec with Matchers {
   it should "leftMap to transform errors" in {
     val person = Person("", -1)
     Validator[Person].mapErrors(_.cause.length).validate(person) should be {
-      invalid(NEL(
+      invalid(NEL.of(
         "must not be empty".length,
         "must be positive".length
       ))
@@ -76,7 +76,7 @@ class PersonTest extends FlatSpec with Matchers {
       invalidNel(ConstraintViolation("age", "must be positive"))
     }
     validator.validate(invalidPerson) should be {
-      invalid(NEL(
+      invalid(NEL.of(
         ConstraintViolation("name", "must not be empty"),
         ConstraintViolation("age", "must be positive")
       ))

@@ -29,7 +29,7 @@ class TraverseTest extends FlatSpec with Matchers {
   it should "fail with multiple elements, all invalid" in {
     val list = Person("", 1) :: Person("Chris", -1) :: Nil
     list.validated should be {
-      invalid(NEL(
+      invalid(NEL.of(
         ConstraintViolation("name", "must not be empty"),
         ConstraintViolation("age", "must be positive")
       ))
@@ -56,7 +56,7 @@ class TraverseTest extends FlatSpec with Matchers {
   it should "fail with multiple elements, all invalid" in {
     val x = Map("Invalid1" -> Person("", 1), "Invalid2" -> Person("Chris", -1))
     x.validated should be {
-      invalid(NEL(
+      invalid(NEL.of(
         ConstraintViolation("name", "must not be empty"),
         ConstraintViolation("age", "must be positive")
       ))
