@@ -22,7 +22,7 @@ class TraverseTest extends FlatSpec with Matchers {
   it should "fail with one valid element and one invalid element" in {
     val list = Person("Nick", 1) :: Person("Chris", -1) :: Nil
     list.validated should be {
-      invalidNel(ConstraintViolation("age", "must be positive"))
+      invalidNel(ConstraintViolation(Root /# 1 / "age", "must be positive"))
     }
   }
 
@@ -30,9 +30,23 @@ class TraverseTest extends FlatSpec with Matchers {
     val list = Person("", 1) :: Person("Chris", -1) :: Nil
     list.validated should be {
       invalid(NEL.of(
-        ConstraintViolation("name", "must not be empty"),
-        ConstraintViolation("age", "must be positive")
+        ConstraintViolation(Root /# 0 / "name", "must not be empty"),
+        ConstraintViolation(Root /# 1 / "age", "must be positive")
       ))
+    }
+  }
+
+  it should "fail with one invalid element, as a child of an object graph" in {
+    case class Test(people: List[Person])
+    implicit val testValidator = Validator.of[Test](
+      validate(_.people, "people")
+    )
+
+    val graph = Test(Person("Nick", 1) :: Person("Chris", -1) :: Nil)
+    graph.validated should be {
+      invalidNel(
+        ConstraintViolation(Root / "people" /# 1 / "age", "must be positive")
+      )
     }
   }
 
@@ -76,7 +90,7 @@ class TraverseTest extends FlatSpec with Matchers {
   it should "fail with one invalid element" in {
     val x = Option(Person("Chris", -1))
     x.validated should be {
-      invalidNel(ConstraintViolation("age", "must be positive"))
+      invalidNel(ConstraintViolation(Root /# 0 / "age", "must be positive"))
     }
   }
 }

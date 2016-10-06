@@ -9,20 +9,18 @@ import cats.kernel.Monoid
 
 import scala.language.higherKinds
 
-package object validation {
-
-  type Path = List[String]
+package object validation extends ConstraintViolation.Implicits {
 
   def require[A](predicate: A => Boolean,
                  name: String,
                  error: => String): Validator[ConstraintViolation, A] =
     constraint(
-      predicate, name, (x: A, loc: Path) => ConstraintViolation(loc, error))
+      predicate, name, (x: A, loc: Node) => ConstraintViolation(loc, error))
 
   def constraint[E, A](predicate: A => Boolean,
                        name: String,
-                       error: (A, List[String]) => E): Validator[E, A] =
-    new ConstraintValidator(predicate, error, name :: Nil)
+                       error: (A, Node) => E): Validator[E, A] =
+    new ConstraintValidator(predicate, error, Root / name)
 
   def constraint[E, A, B](selector: A => B, name: String)
                          (implicit V: Validator[E, B]): Validator[E, A] =
@@ -30,7 +28,7 @@ package object validation {
 
   def validate[E, A, B](selector: A => B, name: String)
                        (implicit V: Validator[E, B]): Validator[E, A] =
-    new NestedValidator(selector, name :: Nil)(V)
+    new NestedValidator(selector, Root / name)(V)
 
   implicit class ValidatorSyntax[A](val x: A) extends AnyVal {
     def validated(implicit V: Validator[ConstraintViolation, A]): ValidatedNel[ConstraintViolation, A] =
@@ -63,10 +61,25 @@ package object validation {
 
   implicit def traversableValidator[F[_]: Traverse, E, A]
                                    (implicit V: Validator[E, A]) = {
-    new Validator[E, F[A]] {
-      override def validate(subject: F[A]): ValidatedNel[E, F[A]] = {
-        Traverse[F].sequence[ValidatedNel[E, ?], A] {
-          Traverse[F].map(subject)(V.validate)
+    new TraverseValidator[E, F, A]
+  }
+
+  class TraverseValidator[E, F[_]: Traverse, A](implicit V: Validator[E, A])
+    extends Validator[E, F[A]] {
+
+    override def parent(parents: Node): Validator[E, F[A]] =
+      new TraverseValidator[E, F, A] {
+        override private[validation] val path: Node =
+          TraverseValidator.this.path.parent(parents)
+      }
+
+    override def validate(subject: F[A]): ValidatedNel[E, F[A]] = {
+      Traverse[F].sequence[ValidatedNel[E, ?], A] {
+        var i = 0
+        Traverse[F].map(subject) { x =>
+          val r = V.parent(V.path /# i).validate(x)
+          i = i + 1
+          r
         }
       }
     }

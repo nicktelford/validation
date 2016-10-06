@@ -1,5 +1,6 @@
 package net.nicktelford.validation
 
+import cats.Traverse
 import cats.implicits._
 import cats.data.{ValidatedNel, NonEmptyList => NEL}
 import cats.data.Validated.{Invalid, Valid, invalidNel, valid}
@@ -17,11 +18,11 @@ object Validator {
 
 trait Validator[E, A] {
 
-  private[validation] val path: Path = Nil
-  private[validation] def parent(parents: Path): Validator[E, A] =
+  private[validation] val path: Node = Root
+  private[validation] def parent(parents: Node): Validator[E, A] =
     new Validator[E, A] {
-      override private[validation] val path: Path =
-        parents ++ Validator.this.path
+      override private[validation] val path: Node =
+        Validator.this.path.parent(parents)
 
       override def validate(subject: A): ValidatedNel[E, A] =
         Validator.this.validate(subject)
@@ -62,26 +63,26 @@ trait Validator[E, A] {
 }
 
 class ConstraintValidator[E, A](predicate: A => Boolean,
-                                error: (A, Path) => E,
-                                override val path: Path = Nil)
+                                error: (A, Node) => E,
+                                override val path: Node = Root)
   extends Validator[E, A] {
 
   override private[validation]
-  def parent(parents: Path): Validator[E, A] =
-    new ConstraintValidator[E, A](predicate, error, parents ++ path)
+  def parent(parents: Node): Validator[E, A] =
+    new ConstraintValidator[E, A](predicate, error, path.parent(parents))
 
   override def validate(subject: A): ValidatedNel[E, A] =
     if (predicate(subject)) valid(subject)
     else invalidNel(error(subject, path))
 }
 
-class NestedValidator[E, A, B](selector: A => B, override val path: Path = Nil)
+class NestedValidator[E, A, B](selector: A => B, override val path: Node = Root)
                               (implicit V: Validator[E, B])
   extends Validator[E, A] {
 
   override private[validation]
-  def parent(parents: List[String]): Validator[E, A] =
-    new NestedValidator[E, A, B](selector, parents ++ path)(V)
+  def parent(parents: Node): Validator[E, A] =
+    new NestedValidator[E, A, B](selector, path.parent(parents))(V)
 
   override def validate(subject: A): ValidatedNel[E, A] = {
     V.parent(path).validate(selector(subject)).map(_ => subject)
@@ -89,12 +90,12 @@ class NestedValidator[E, A, B](selector: A => B, override val path: Path = Nil)
 }
 
 class MultipleValidator[E, A](validators: List[Validator[E, A]],
-                              override val path: Path = Nil)
+                              override val path: Node = Root)
   extends Validator[E, A] {
 
   override private[validation]
-  def parent(parents: Path): Validator[E, A] =
-    new MultipleValidator[E, A](validators, parents ++ path)
+  def parent(parents: Node): Validator[E, A] =
+    new MultipleValidator[E, A](validators, path.parent(parents))
 
   override def validate(subject: A): ValidatedNel[E, A] = {
     validators
