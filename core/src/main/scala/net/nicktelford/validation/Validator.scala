@@ -80,4 +80,8 @@ trait Validator[E, A] extends (A => Validated[E, A]) {
       Validator.this.apply(g(subject)).map(f)
     }
   }
+
+  def leftMap[EE](f: E => EE): Validator[EE, A] = new Validator[EE, A] {
+    override def apply(v1: A): Validated[EE, A] = self.apply(v1).leftMap(f)
+  }
 }

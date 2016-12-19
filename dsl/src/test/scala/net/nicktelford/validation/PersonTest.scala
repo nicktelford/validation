@@ -49,15 +49,15 @@ class PersonTest extends FlatSpec with Matchers {
     }
   }
 
-//  it should "leftMap to transform errors" in {
-//    val person = Person("", -1)
-//    Validator[Person].mapErrors(_.cause.length).validate(person) should be {
-//      invalid(NEL.of(
-//        "must not be empty".length,
-//        "must be positive".length
-//      ))
-//    }
-//  }
+  it should "leftMap to transform errors" in {
+    val person = Person("", -1)
+    ConstraintValidator[Person].leftMap(_.map(_.cause.length)).apply(person) should be {
+      invalid(NEL.of(
+        "must not be empty".length,
+        "must be positive".length
+      ))
+    }
+  }
 
   it should "provide the cartesian syntax" in {
     import cats.syntax.cartesian._
