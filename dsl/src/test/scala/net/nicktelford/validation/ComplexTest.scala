@@ -2,17 +2,22 @@ package net.nicktelford.validation
 
 import cats.data.Validated.{invalidNel, invalid, valid}
 import cats.data.{NonEmptyList => NEL}
+import cats.instances.all._
 import org.scalatest._
 
 object ComplexPerson {
-  implicit val addressValidator = Validator.of[Address](
-    require(_.street.nonEmpty, "street", "must not be empty")
+
+  import dsl._
+
+  implicit val addressValidator = ConstraintValidator.all[Address](
+    require(_.street, notEmpty[String]),
+    require(_.building, whenRight(isPositive[Int]))
   )
 
-  implicit val personValidator = Validator.of[ComplexPerson](
-    require(_.name.nonEmpty, "name", "must not be empty"),
-    require(_.age > 0, "age", "must be positive"),
-    validate(_.address, "address")
+  implicit val personValidator = ConstraintValidator.all[ComplexPerson](
+    require(_.name, notEmpty[String]),
+    require(_.age, isPositive[Int]),
+    validate(_.address)
   )
 }
 
@@ -22,7 +27,7 @@ case class Address(building: Either[String, Int], street: String, city: String, 
 
 class ComplexTest extends FlatSpec with Matchers {
 
-  val validator = implicitly[Validator[ConstraintViolation, ComplexPerson]]
+  val validator = implicitly[ConstraintValidator[ComplexPerson]]
 
   "ComplexPerson being validated" should "validate a valid ComplexPerson" in {
     val person = ComplexPerson("Nick", 30, Address(Right(100), "Frostmourne Terrace", "Skylake", "Belgium"))
@@ -32,14 +37,14 @@ class ComplexTest extends FlatSpec with Matchers {
   it should "fail on invalid root object" in {
     val person = ComplexPerson("", 30, Address(Right(100), "Frostmourne Terrace", "Skylake", "Belgium"))
     person.validated should be {
-      invalidNel(ConstraintViolation("name", "must not be empty"))
+      invalidNel(ConstraintViolation(person, "name" :: Nil, "must not be empty"))
     }
   }
 
   it should "fail on invalid nested object" in {
     val person = ComplexPerson("Nick", 30, Address(Right(100), "", "Skylake", "Belgium"))
     person.validated should be {
-      invalidNel(ConstraintViolation("address" :: "street" :: Nil, "must not be empty"))
+      invalidNel(ConstraintViolation(person, "address" :: "street" :: Nil, "must not be empty"))
     }
   }
 
@@ -47,8 +52,8 @@ class ComplexTest extends FlatSpec with Matchers {
     val person = ComplexPerson("Nick", 0, Address(Right(100), "", "Skylake", "Belgium"))
     person.validated should be {
       invalid(NEL.of(
-        ConstraintViolation("age", "must be positive"),
-        ConstraintViolation("address" :: "street" :: Nil, "must not be empty")
+        ConstraintViolation(person, "age" :: Nil, "must be positive"),
+        ConstraintViolation(person, "address" :: "street" :: Nil, "must not be empty")
       ))
     }
   }
