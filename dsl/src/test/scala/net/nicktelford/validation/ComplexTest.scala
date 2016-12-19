@@ -10,13 +10,13 @@ object ComplexPerson {
   import dsl._
 
   implicit val addressValidator = ConstraintValidator.all[Address](
-    require(_.street, notEmpty[String]),
-    require(_.building, whenRight(isPositive[Int]))
+    ensure(_.street, notEmpty[String]),
+    ensure(_.building, whenRight(isPositive[Int]))
   )
 
   implicit val personValidator = ConstraintValidator.all[ComplexPerson](
-    require(_.name, notEmpty[String]),
-    require(_.age, isPositive[Int]),
+    ensure(_.name, notEmpty[String]),
+    ensure(_.age, isPositive[Int]),
     validate(_.address)
   )
 }

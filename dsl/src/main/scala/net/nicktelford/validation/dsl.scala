@@ -14,7 +14,7 @@ object dsl
 
 trait ValidatorConstructors {
 
-  class Require[A] {
+  class Ensure[A] {
 
     def apply[B](selector: A => B,
                  predicate: B => Boolean,
@@ -48,7 +48,7 @@ trait ValidatorConstructors {
       ConstraintValidator(selector, path, validator)
   }
 
-  def require[A]: Require[A] = new Require[A]
+  def ensure[A]: Ensure[A] = new Ensure[A]
 
   def validate[A]: Validate[A] = new Validate[A]
 }

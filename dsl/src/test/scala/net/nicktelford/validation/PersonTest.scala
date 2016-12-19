@@ -10,16 +10,14 @@ object Person {
   import dsl._
 
   implicit val personValidator = ConstraintValidator.all[Person](
-    require(_.name, notEmpty[String]),
-    require(_.age, isPositive[Int])
+    ensure(_.name, notEmpty[String]),
+    ensure(_.age, isPositive[Int])
   )
 }
 
 case class Person(name: String, age: Int)
 
 class PersonTest extends FlatSpec with Matchers {
-
-  val validator =
 
   "Validator" should "validate a valid Person" in {
     Person("Nick", 29).validated should be(valid(Person("Nick", 29)))
@@ -64,8 +62,8 @@ class PersonTest extends FlatSpec with Matchers {
     import instances._
     import dsl._
 
-    val nameValidator = require[Person](_.name, notEmpty[String])
-    val ageValidator = require[Person](_.age, isPositive[Int])
+    val nameValidator = ensure[Person](_.name, notEmpty[String])
+    val ageValidator = ensure[Person](_.age, isPositive[Int])
     val validPerson = Person("Nick", 30)
     val invalidName = Person("", 20)
     val invalidAge = Person("Chris", -299)

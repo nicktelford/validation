@@ -37,12 +37,8 @@ object Validator {
 
   def apply[E, A](predicate: A => Boolean, error: A => E): Validator[E, A] =
     new Validator[E, A] {
-      def apply(subject: A): Validated[E, A] = {
-        if (predicate(subject))
-          valid(subject)
-        else
-          invalid(error(subject))
-      }
+      def apply(subject: A): Validated[E, A] =
+        valid(subject).ensure(error(subject))(predicate)
     }
 
   def apply[E, A, B](selector: A => B,
@@ -50,38 +46,41 @@ object Validator {
                      validator: Validator[E, B],
                      mapError: E => E): Validator[E, A] =
     new Validator[E, A] {
-      def apply(subject: A): Validated[E, A] = {
+      def apply(subject: A): Validated[E, A] =
         validator(selector(subject)).bimap[E, A](mapError, _ => subject)
-      }
     }
 }
 
 trait Validator[E, A] extends (A => Validated[E, A]) {
   self =>
 
-  // allows combining of Validators
   def &&(other: Validator[E, A])(implicit E: Semigroup[E]): Validator[E, A] =
+    combine(other)
+
+  // from Semigroup
+  def combine(other: Validator[E, A])
+             (implicit E: Semigroup[E]): Validator[E, A] =
     new Validator[E, A] {
       def apply(subject: A): Validated[E, A] =
         (self.apply(subject) |@| other.apply(subject)).map { case (x, _) => x }
     }
 
   // from Cartesian
-  def product[B](other: Validator[E, B])(implicit E: Semigroup[E]): Validator[E, (A, B)] =
+  def product[B](other: Validator[E, B])
+                (implicit E: Semigroup[E]): Validator[E, (A, B)] =
     new Validator[E, (A, B)] {
-      override def apply(subject: (A, B)): Validated[E, (A, B)] = {
+      override def apply(subject: (A, B)): Validated[E, (A, B)] =
         Validator.this.apply(subject._1).product(other.apply(subject._2))
-      }
     }
 
   // from Invariant
   def imap[B](f: A => B)(g: B => A): Validator[E, B] = new Validator[E, B] {
-    override def apply(subject: B): Validated[E, B] = {
+    override def apply(subject: B): Validated[E, B] =
       Validator.this.apply(g(subject)).map(f)
-    }
   }
 
   def leftMap[EE](f: E => EE): Validator[EE, A] = new Validator[EE, A] {
-    override def apply(v1: A): Validated[EE, A] = self.apply(v1).leftMap(f)
+    override def apply(subject: A): Validated[EE, A] =
+      self.apply(subject).leftMap(f)
   }
 }
